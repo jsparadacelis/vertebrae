@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  vertebrae-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vertebrae-segmentation-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # AWS credentials
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+
+      # S3 configuration
+      - S3_BUCKET=${S3_BUCKET:-vertebrae-artifacts}
+      - S3_MODEL_KEY=${S3_MODEL_KEY:-model_final.pth}
+
+      # API configuration
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_WORKERS=${API_WORKERS:-1}
+
+      # Model configuration
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.5}
+      - NMS_THRESHOLD=${NMS_THRESHOLD:-0.5}
+      - MAX_DETECTIONS=${MAX_DETECTIONS:-100}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Mount model cache to persist downloads
+      - model-cache:/tmp/model_cache
+
+      # Optional: mount local code for development (comment out for production)
+      # - ./app:/app/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  model-cache:
+    driver: local
