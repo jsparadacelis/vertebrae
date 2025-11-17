@@ -7,10 +7,11 @@ from typing import Dict, List, Any
 
 import boto3
 import cv2
+import os
 import numpy as np
-from botocore.exceptions import ClientError, NoCredentialsError
 from PIL import Image
 from pycocotools import mask as mask_util
+
 
 from app.config import get_settings
 
@@ -18,49 +19,35 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def download_model_from_s3() -> Path:
-    """
-    Download the model from S3 if not already cached locally.
-
-    Returns:
-        Path to the downloaded model file.
-
-    Raises:
-        NoCredentialsError: If AWS credentials are not configured.
-        ClientError: If S3 download fails.
-    """
-    model_path = settings.get_model_path()
-
-    if model_path.exists():
-        logger.info(f"Model already cached at {model_path}")
-        return model_path
-
-    logger.info(f"Downloading model from s3://{settings.s3_bucket}/{settings.s3_model_key}")
-
+def download_model_from_s3():
+    bucket = os.getenv('S3_BUCKET', 'vertebrae-artifacts')
+    key = os.getenv('MODEL_S3_KEY', 'model_final.pth')
+    cache_dir = os.getenv('MODEL_CACHE_DIR', '/tmp/models')
+    
+    logger.info(f"Downloading from s3://{bucket}/{key}")
+    
+    # Use default credentials (same as AWS CLI) - DON'T pass explicit credentials
+    s3_client = boto3.client('s3')
+    
+    # Prepare local path
+    local_path = Path(cache_dir) / 'model_final.pth'
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Check if already downloaded
+    if local_path.exists():
+        logger.info(f"Model already cached at {local_path}")
+        return str(local_path)
+    
     try:
-        s3_client = boto3.client(
-            's3',
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
-            region_name=settings.aws_region
-        )
-
-        settings.model_cache_dir.mkdir(parents=True, exist_ok=True)
-        s3_client.download_file(
-            settings.s3_bucket,
-            settings.s3_model_key,
-            str(model_path)
-        )
-
-        logger.info(f"Model downloaded successfully to {model_path}")
-        return model_path
-
-    except NoCredentialsError:
-        logger.error("AWS credentials not found")
+        logger.info("Downloading model from S3...")
+        s3_client.download_file(bucket, key, str(local_path))
+        logger.info(f"✅ Model downloaded to {local_path}")
+        return str(local_path)
+        
+    except Exception as e:
+        logger.error(f"Failed to download model: {e}")
         raise
-    except ClientError as e:
-        logger.error(f"Failed to download model from S3: {e}")
-        raise
+
 
 
 def load_image_from_bytes(image_bytes: bytes) -> np.ndarray:
