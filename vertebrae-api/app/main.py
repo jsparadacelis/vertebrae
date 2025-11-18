@@ -9,7 +9,7 @@ from fastapi.responses import Response
 
 from app.config import get_settings
 from models.base import BaseSegmentationModel
-from models.factory import get_model, ModelType
+from models.factory import get_model, ModelType, initialize_all_models
 from app.schemas import (
     PredictionResponse,
     Detection,

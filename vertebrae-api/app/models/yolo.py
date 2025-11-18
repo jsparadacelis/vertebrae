@@ -9,7 +9,7 @@ from ultralytics import YOLO
 
 from app.config import get_settings
 from app.utils import download_model_from_s3, encode_mask_to_rle
-from app.models.base import BaseSegmentationModel
+from base import BaseSegmentationModel
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
