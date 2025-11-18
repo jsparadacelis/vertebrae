@@ -7,11 +7,9 @@ from typing import Dict, List, Any
 
 import boto3
 import cv2
-import os
 import numpy as np
 from PIL import Image
 from pycocotools import mask as mask_util
-
 
 from app.config import get_settings
 
@@ -162,6 +160,7 @@ def draw_predictions_on_image(
         Annotated image in BGR format.
     """
     annotated = image.copy()
+    img_height, img_width = image.shape[:2]
 
     # Generate random colors for each class
     np.random.seed(42)
@@ -176,9 +175,19 @@ def draw_predictions_on_image(
 
         color = colors[cls]
 
+        # Resize mask to match image dimensions if needed
+        if mask.shape[:2] != (img_height, img_width):
+            mask_resized = cv2.resize(
+                mask.astype(np.uint8),
+                (img_width, img_height),
+                interpolation=cv2.INTER_NEAREST
+            )
+        else:
+            mask_resized = mask.astype(np.uint8)
+
         # Draw filled mask with transparency
         mask_overlay = annotated.copy()
-        mask_overlay[mask > 0] = color
+        mask_overlay[mask_resized > 0] = color
         annotated = cv2.addWeighted(annotated, 0.7, mask_overlay, 0.3, 0)
 
         # Draw bounding box
