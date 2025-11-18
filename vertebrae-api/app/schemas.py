@@ -55,6 +55,7 @@ class PredictionResponse(BaseModel):
         ...,
         description="Inference time in milliseconds"
     )
+    model_used: str = Field(..., description="Model used for inference (yolo or maskrcnn)")
 
 
 class HealthResponse(BaseModel):
@@ -69,12 +70,21 @@ class ModelInfo(BaseModel):
     """Response model for model information endpoint."""
 
     model_name: str = Field(..., description="Model architecture name")
+    model_type: str = Field(..., description="Model type (yolo or maskrcnn)")
     num_classes: int = Field(..., description="Number of vertebrae classes")
     classes: List[str] = Field(..., description="List of class names")
     backbone: str = Field(..., description="Model backbone architecture")
     device: str = Field(..., description="Inference device (cpu/cuda)")
     confidence_threshold: float = Field(..., description="Minimum confidence threshold")
     nms_threshold: float = Field(..., description="Non-maximum suppression threshold")
+    framework: str = Field(..., description="Framework used (Ultralytics or Detectron2)")
+
+
+class ModelsInfoResponse(BaseModel):
+    """Response model for all models information."""
+
+    models: Dict[str, Dict[str, Any]] = Field(..., description="Information about all loaded models")
+    default_model: str = Field(..., description="Default model used when none specified")
 
 
 class ErrorResponse(BaseModel):

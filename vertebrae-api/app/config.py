@@ -1,3 +1,5 @@
+"""Configuration management for the vertebrae segmentation API."""
+
 from functools import lru_cache
 from pathlib import Path
 from typing import List
@@ -5,24 +7,38 @@ from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # S3 Model Configuration
+    # AWS Configuration
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
+
+    # S3 Configuration
     s3_bucket: str = "vertebrae-artifacts"
-    s3_model_key: str = "model_final.pth"
     model_cache_dir: Path = Path("/tmp/model_cache")
+
+    # Model Selection
+    default_model: str = "yolo"  # Options: "yolo" or "maskrcnn"
+
+    # YOLO Model Configuration
+    yolo_model_key: str = "yolo_best.pt"
+
+    # Mask R-CNN Model Configuration
+    maskrcnn_model_key: str = "model_final.pth"
+    maskrcnn_backbone: str = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
 
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_workers: int = 1
 
-    # Model Configuration
+    # Model Inference Configuration
     confidence_threshold: float = 0.5
     nms_threshold: float = 0.5
     max_detections: int = 100
+    device: str = "cpu"
 
     # Vertebrae Classes (T1-T12, L1-L5)
     vertebrae_classes: List[str] = [
@@ -32,10 +48,7 @@ class Settings(BaseSettings):
     ]
     num_classes: int = 17
 
-    # Detectron2 Model Configuration
-    model_backbone: str = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
-    device: str = "cpu"
-
+    # Logging
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(
@@ -45,10 +58,10 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    def get_model_path(self) -> Path:
-        """Get the local path where the model should be cached."""
+    def get_model_cache_path(self, filename: str) -> Path:
+        """Get the local path where a model should be cached."""
         self.model_cache_dir.mkdir(parents=True, exist_ok=True)
-        return self.model_cache_dir / self.s3_model_key
+        return self.model_cache_dir / filename
 
 
 @lru_cache()
