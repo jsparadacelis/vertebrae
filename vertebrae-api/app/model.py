@@ -1,5 +1,3 @@
-"""Detectron2 model loading and inference for vertebrae segmentation."""
-
 import logging
 import time
 from typing import Dict, List, Optional, Any

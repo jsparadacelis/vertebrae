@@ -12,7 +12,7 @@ from detectron2.engine import DefaultPredictor
 
 from app.config import get_settings
 from app.utils import download_model_from_s3, encode_mask_to_rle
-from base import BaseSegmentationModel
+from app.models.base import BaseSegmentationModel
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

@@ -4,9 +4,9 @@ import logging
 from enum import Enum
 from typing import Dict, Optional
 
-from base import BaseSegmentationModel
-from maskrcnn import MaskRCNNModel
-from yolo import YOLOModel
+from app.models.base import BaseSegmentationModel
+from app.models.maskrcnn import MaskRCNNModel
+from app.models.yolo import YOLOModel
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)

@@ -8,8 +8,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, status, Query
 from fastapi.responses import Response
 
 from app.config import get_settings
-from models.base import BaseSegmentationModel
-from models.factory import get_model, ModelType, initialize_all_models
+from app.models import get_model, ModelType, initialize_all_models, get_all_models_info
 from app.schemas import (
     PredictionResponse,
     Detection,
