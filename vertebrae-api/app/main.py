@@ -8,7 +8,8 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, status, Query
 from fastapi.responses import Response
 
 from app.config import get_settings
-from app.models import get_model, ModelType, initialize_all_models, get_all_models_info
+from app.models import initialize_all_models
+from app.services import SegmentationService
 from app.schemas import (
     PredictionResponse,
     Detection,
@@ -16,11 +17,6 @@ from app.schemas import (
     ModelInfo,
     ErrorResponse,
     ModelsInfoResponse
-)
-from app.utils import (
-    load_image_from_bytes,
-    draw_predictions_on_image,
-    image_to_bytes
 )
 
 # Configure logging
@@ -31,6 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+segmentation_service = SegmentationService()
 
 
 @asynccontextmanager
@@ -92,22 +89,8 @@ async def health_check():
     Returns:
         Health status with model loading state.
     """
-    try:
-        models_info = get_all_models_info()
-        all_loaded = len(models_info) > 0
-
-        return HealthResponse(
-            status="healthy" if all_loaded else "unhealthy",
-            model_loaded=all_loaded,
-            model_path=str(settings.model_cache_dir) if all_loaded else None
-        )
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return HealthResponse(
-            status="unhealthy",
-            model_loaded=False,
-            model_path=None
-        )
+    health_status = segmentation_service.check_health()
+    return HealthResponse(**health_status)
 
 
 @app.get(
@@ -124,11 +107,8 @@ async def get_models_info():
         Information about all available models.
     """
     try:
-        models_info = get_all_models_info()
-        return ModelsInfoResponse(
-            models=models_info,
-            default_model=settings.default_model
-        )
+        models_info = segmentation_service.get_available_models()
+        return ModelsInfoResponse(**models_info)
     except Exception as e:
         logger.error(f"Failed to get models info: {e}")
         raise HTTPException(
@@ -156,9 +136,7 @@ async def get_model_info(
         Model configuration and metadata.
     """
     try:
-        model_type = ModelType(model) if model else None
-        model_instance = get_model(model_type)
-        info = model_instance.get_model_info()
+        info = segmentation_service.get_specific_model_info(model)
         return ModelInfo(**info)
     except ValueError as e:
         raise HTTPException(
@@ -202,7 +180,7 @@ async def predict(
         HTTPException: If image is invalid or inference fails.
     """
     try:
-        # Read and validate image
+        # Read image
         image_bytes = await file.read()
 
         if not image_bytes:
@@ -211,43 +189,26 @@ async def predict(
                 detail="Empty file uploaded"
             )
 
-        # Load image
-        try:
-            image = load_image_from_bytes(image_bytes)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid image format: {str(e)}"
-            )
-
-        # Get model
-        try:
-            model_type = ModelType(model) if model else None
-            model_instance = get_model(model_type)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid model type '{model}'. Use 'yolo' or 'maskrcnn'"
-            )
-
-        # Run inference
-        predictions = model_instance.predict(image)
-
-        # Format detections
-        detections = model_instance.format_detections(predictions)
+        # Run prediction
+        result = segmentation_service.predict_from_image_bytes(image_bytes, model)
 
         # Create response
         response = PredictionResponse(
-            detections=[Detection(**det) for det in detections],
-            num_detections=predictions["num_detections"],
-            image_shape=predictions["image_shape"],
-            processing_time_ms=predictions["processing_time_ms"],
-            model_used=predictions.get("model_type", model_type.value if model_type else settings.default_model)
+            detections=[Detection(**det) for det in result["detections"]],
+            num_detections=result["num_detections"],
+            image_shape=result["image_shape"],
+            processing_time_ms=result["processing_time_ms"],
+            model_used=result["model_used"]
         )
 
-        logger.info(f"Prediction successful using {predictions.get('model_type', 'unknown')}: {predictions['num_detections']} vertebrae detected")
+        logger.info(f"Prediction successful using {result['model_used']}: {result['num_detections']} vertebrae detected")
         return response
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid input: {str(e)}"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -289,7 +250,7 @@ async def predict_visualize(
         HTTPException: If image is invalid or inference fails.
     """
     try:
-        # Read and validate image
+        # Read image
         image_bytes = await file.read()
 
         if not image_bytes:
@@ -298,54 +259,26 @@ async def predict_visualize(
                 detail="Empty file uploaded"
             )
 
-        # Load image
-        try:
-            image = load_image_from_bytes(image_bytes)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid image format: {str(e)}"
-            )
+        # Run prediction and visualization
+        result = segmentation_service.predict_and_visualize(image_bytes, model)
 
-        # Get model
-        try:
-            model_type = ModelType(model) if model else None
-            model_instance = get_model(model_type)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid model type '{model}'. Use 'yolo' or 'maskrcnn'"
-            )
-
-        # Run inference
-        predictions = model_instance.predict(image)
-
-        # Draw predictions on image
-        annotated_image = draw_predictions_on_image(
-            image=image,
-            boxes=predictions["boxes"],
-            masks=predictions["masks"],
-            scores=predictions["scores"],
-            classes=[settings.vertebrae_classes[i] for i in predictions["classes"]],
-            score_threshold=settings.confidence_threshold
-        )
-
-        # Convert to bytes
-        output_bytes = image_to_bytes(annotated_image, format="PNG")
-
-        model_used = predictions.get("model_type", model_type.value if model_type else settings.default_model)
-        logger.info(f"Visualization successful using {model_used}: {predictions['num_detections']} vertebrae annotated")
+        logger.info(f"Visualization successful using {result['model_used']}: {result['num_detections']} vertebrae annotated")
 
         return Response(
-            content=output_bytes,
+            content=result["image_bytes"],
             media_type="image/png",
             headers={
-                "X-Num-Detections": str(predictions["num_detections"]),
-                "X-Processing-Time-Ms": str(predictions["processing_time_ms"]),
-                "X-Model-Used": model_used
+                "X-Num-Detections": str(result["num_detections"]),
+                "X-Processing-Time-Ms": str(result["processing_time_ms"]),
+                "X-Model-Used": result["model_used"]
             }
         )
 
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid input: {str(e)}"
+        )
     except HTTPException:
         raise
     except Exception as e:
