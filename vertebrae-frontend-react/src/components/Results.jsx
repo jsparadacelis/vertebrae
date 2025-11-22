@@ -9,6 +9,26 @@ export default function Results({ results, annotatedImage, originalImageUrl, onD
     return 'confidence-low';
   };
 
+  // Sort detections by vertebra name in anatomical order (T1-T12, L1-L5)
+  const sortedDetections = results?.detections ? [...results.detections].sort((a, b) => {
+    const parseVertebra = (name) => {
+      const match = name.match(/([TL])(\d+)/);
+      if (!match) return { type: 'Z', num: 0 }; // Handle unexpected format
+      return { type: match[1], num: parseInt(match[2]) };
+    };
+
+    const aVert = parseVertebra(a.class_name);
+    const bVert = parseVertebra(b.class_name);
+
+    // Sort T before L
+    if (aVert.type !== bVert.type) {
+      return aVert.type === 'T' ? -1 : 1;
+    }
+
+    // Sort by number within same type
+    return aVert.num - bVert.num;
+  }) : [];
+
   return (
     <div className="card">
       <h2>Results</h2>
@@ -43,7 +63,7 @@ export default function Results({ results, annotatedImage, originalImageUrl, onD
                 </tr>
               </thead>
               <tbody>
-                {results.detections.map((detection, index) => (
+                {sortedDetections.map((detection, index) => (
                   <tr key={index}>
                     <td>{index + 1}</td>
                     <td>
