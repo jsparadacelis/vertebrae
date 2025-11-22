@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './ImageUpload.css';
 
-export default function ImageUpload({ onFileSelect, selectedFile, onClear }) {
+export default function ImageUpload({ onFileSelect, selectedFile, onClear, annotatedImage, originalImageUrl, onDownload }) {
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
 
@@ -53,17 +53,21 @@ export default function ImageUpload({ onFileSelect, selectedFile, onClear }) {
     onClear();
   };
 
+  const handleBrowseClick = (e) => {
+    e.stopPropagation();
+    document.getElementById('fileInput').click();
+  };
+
   return (
     <div className="card">
-      <h2>Upload Image</h2>
+      <h2>{annotatedImage ? 'Results' : 'Upload Image'}</h2>
 
-      {!previewUrl ? (
+      {!previewUrl && !annotatedImage ? (
         <div
           className={`upload-zone ${isDragging ? 'drag-over' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => document.getElementById('fileInput').click()}
         >
           <input
             type="file"
@@ -89,10 +93,39 @@ export default function ImageUpload({ onFileSelect, selectedFile, onClear }) {
             </svg>
             <p className="upload-text">Drag and drop an image here</p>
             <p className="upload-subtext">or</p>
-            <button className="btn-primary" onClick={(e) => e.stopPropagation()}>
+            <button className="btn-primary" onClick={handleBrowseClick}>
               Browse Files
             </button>
             <p className="upload-hint">Supported formats: JPEG, PNG</p>
+          </div>
+        </div>
+      ) : annotatedImage ? (
+        <div className="images-comparison-upload">
+          <div className="images-grid">
+            <div className="image-container">
+              <h4>Original Image</h4>
+              <img
+                src={originalImageUrl}
+                alt="Original"
+                className="comparison-image"
+              />
+            </div>
+            <div className="image-container">
+              <h4>Annotated Image</h4>
+              <img
+                src={annotatedImage.imageUrl}
+                alt="Annotated"
+                className="comparison-image"
+              />
+            </div>
+          </div>
+          <div className="action-buttons">
+            <button className="btn-secondary" onClick={onDownload}>
+              Download Annotated Image
+            </button>
+            <button className="btn-danger" onClick={handleClear}>
+              Clear & Upload New Image
+            </button>
           </div>
         </div>
       ) : (

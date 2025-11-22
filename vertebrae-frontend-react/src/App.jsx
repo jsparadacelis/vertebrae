@@ -10,7 +10,7 @@ import './App.css';
 function App() {
   const [selectedModel, setSelectedModel] = useState('yolo');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [originalImageUrl, setOriginalImageUrl] = useState(null);
   const [visualizing, setVisualizing] = useState(false);
   const [results, setResults] = useState(null);
   const [annotatedImage, setAnnotatedImage] = useState(null);
@@ -19,27 +19,20 @@ function App() {
     setSelectedFile(file);
     setResults(null);
     setAnnotatedImage(null);
+
+    // Create preview URL for original image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setOriginalImageUrl(e.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleClearImage = () => {
     setSelectedFile(null);
+    setOriginalImageUrl(null);
     setResults(null);
     setAnnotatedImage(null);
-  };
-
-  const handleAnalyze = async () => {
-    if (!selectedFile) return;
-
-    setAnalyzing(true);
-    try {
-      const data = await api.predict(selectedFile, selectedModel);
-      setResults(data);
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      alert(`Analysis failed: ${error.message}`);
-    } finally {
-      setAnalyzing(false);
-    }
   };
 
   const handleVisualize = async () => {
@@ -47,18 +40,13 @@ function App() {
 
     setVisualizing(true);
     try {
-      const data = await api.predictVisualize(selectedFile, selectedModel);
-      setAnnotatedImage(data);
+      // First get the visualization
+      const visualData = await api.predictVisualize(selectedFile, selectedModel);
+      setAnnotatedImage(visualData);
 
-      // Also set minimal results if not already set
-      if (!results) {
-        setResults({
-          num_detections: parseInt(data.metadata.numDetections) || 0,
-          processing_time_ms: parseFloat(data.metadata.processingTime) || 0,
-          model_used: data.metadata.modelUsed || selectedModel,
-          detections: [],
-        });
-      }
+      // Then get the detailed results for the table
+      const detectionData = await api.predict(selectedFile, selectedModel);
+      setResults(detectionData);
     } catch (error) {
       console.error('Visualization failed:', error);
       alert(`Visualization failed: ${error.message}`);
@@ -96,22 +84,24 @@ function App() {
             onFileSelect={handleFileSelect}
             selectedFile={selectedFile}
             onClear={handleClearImage}
+            annotatedImage={annotatedImage}
+            originalImageUrl={originalImageUrl}
+            onDownload={handleDownload}
           />
 
-          {selectedFile && (
+          {selectedFile && !annotatedImage && (
             <AnalysisActions
-              onAnalyze={handleAnalyze}
               onVisualize={handleVisualize}
               disabled={!selectedFile}
-              analyzing={analyzing}
               visualizing={visualizing}
             />
           )}
 
-          {(results || annotatedImage) && (
+          {results?.detections?.length > 0 && (
             <Results
-              results={results?.detections?.length > 0 ? results : null}
-              annotatedImage={annotatedImage}
+              results={results}
+              annotatedImage={null}
+              originalImageUrl={originalImageUrl}
               onDownload={handleDownload}
             />
           )}

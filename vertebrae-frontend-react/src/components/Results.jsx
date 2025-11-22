@@ -1,6 +1,6 @@
 import './Results.css';
 
-export default function Results({ results, annotatedImage, onDownload }) {
+export default function Results({ results, annotatedImage, originalImageUrl, onDownload }) {
   if (!results && !annotatedImage) return null;
 
   const getConfidenceClass = (score) => {
@@ -73,15 +73,28 @@ export default function Results({ results, annotatedImage, onDownload }) {
       )}
 
       {annotatedImage && (
-        <div className="annotated-section">
-          <h3>Annotated Image</h3>
-          <img
-            src={annotatedImage.imageUrl}
-            alt="Annotated"
-            className="preview-image"
-          />
+        <div className="images-comparison">
+          <h3>Image Comparison</h3>
+          <div className="images-grid">
+            <div className="image-container">
+              <h4>Original Image</h4>
+              <img
+                src={originalImageUrl}
+                alt="Original"
+                className="comparison-image"
+              />
+            </div>
+            <div className="image-container">
+              <h4>Annotated Image</h4>
+              <img
+                src={annotatedImage.imageUrl}
+                alt="Annotated"
+                className="comparison-image"
+              />
+            </div>
+          </div>
           <button className="btn-secondary" onClick={onDownload}>
-            Download Image
+            Download Annotated Image
           </button>
         </div>
       )}
