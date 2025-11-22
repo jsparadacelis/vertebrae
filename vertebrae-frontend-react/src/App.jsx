@@ -68,14 +68,18 @@ function App() {
     <div className="app">
       <div className="container">
         <header>
-          <h1>Vertebrae Segmentation Tool</h1>
-          <p className="subtitle">
-            AI-powered medical image analysis for T1-T12 and L1-L5 vertebrae
-          </p>
+          <div className="header-content">
+            <img src="/logo.png" alt="Logo" className="header-logo" />
+            <div className="header-text">
+              <h1>Vertebrae Segmentation Tool</h1>
+              <p className="subtitle">
+                AI-powered medical image analysis for T1-T12 and L1-L5 vertebrae
+              </p>
+            </div>
+          </div>
         </header>
 
         <main>
-          <StatusIndicator />
           <ModelSelector
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
@@ -108,6 +112,7 @@ function App() {
         </main>
 
         <footer>
+          <StatusIndicator />
           <p>Vertebrae Segmentation API v0.2.0</p>
         </footer>
       </div>
