@@ -1,5 +1,5 @@
-# Multi-stage build for vertebrae segmentation API with dual model support
-FROM python:3.10-slim as base
+# Optimized Dockerfile for vertebrae segmentation API (CPU-only, minimal size)
+FROM python:3.10-slim as builder
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -8,61 +8,74 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install build dependencies (will be removed later)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install PyTorch CPU-only (smaller)
+RUN pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cpu
+
+# Install Detectron2 CPU-only with minimal dependencies
+ENV FORCE_CUDA="0"
+ENV TORCH_CUDA_ARCH_LIST=""
+RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir \
+    opencv-python-headless==4.9.0.80 \
+    pycocotools==2.0.7 \
+    fastapi==0.109.0 \
+    uvicorn[standard]==0.27.0 \
+    python-multipart==0.0.6 \
+    boto3==1.34.34 \
+    botocore==1.34.34 \
+    pydantic==2.5.3 \
+    pydantic-settings==2.1.0 \
+    python-dotenv==1.0.0 \
+    ultralytics==8.1.0
+
+# Final stage - minimal runtime image
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install only runtime dependencies (much smaller)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
+    libxrender1 \
     libgomp1 \
-    libgl1-mesa-glx \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt .
-
-# Install dependencies in correct order
-RUN pip install --upgrade pip setuptools wheel
-
-# Install PyTorch CPU version (must be before Detectron2)
-RUN pip install torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cpu
-
-# Install Detectron2 with --no-build-isolation flag
-RUN pip install --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
-
-# Install computer vision dependencies
-RUN pip install opencv-python==4.9.0.80 pycocotools==2.0.7
-
-# Install remaining dependencies from requirements.txt
-RUN pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 python-multipart==0.0.6 \
-    boto3==1.34.34 botocore==1.34.34 \
-    pydantic==2.5.3 pydantic-settings==2.1.0 python-dotenv==1.0.0 \
-    ultralytics==8.1.0
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY app/ ./app/
 
-# Create model cache directory with proper permissions
+# Create model cache directory
 RUN mkdir -p /tmp/model_cache && chmod 777 /tmp/model_cache
 
-# Create non-root user for security
+# Create non-root user
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app /tmp/model_cache
 
-# Switch to non-root user
 USER appuser
 
-# Expose port
 EXPOSE 8000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
 
-# Run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
