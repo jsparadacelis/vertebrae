@@ -43,6 +43,9 @@ services:
       # Mount model cache to persist downloads
       - model-cache:/tmp/model_cache
 
+      # Mount local models directory (pre-downloaded from S3)
+      - ./models:/tmp/model_cache
+
       # Optional: mount local code for development (comment out for production)
       # - ./app:/app/app
     restart: unless-stopped
