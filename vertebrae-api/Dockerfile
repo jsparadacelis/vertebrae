@@ -17,34 +17,53 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install PyTorch CPU-only FIRST (this will install numpy as a dependency)
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Install NumPy 1.x FIRST - this is critical
+RUN pip install --no-cache-dir "numpy>=1.21.0,<2.0"
 
-# Pin NumPy to 1.x to avoid compatibility issues with pycocotools and detectron2
-RUN pip install --no-cache-dir "numpy<2.0"
+# Install PyTorch CPU-only (specify version that works with NumPy 1.x)
+RUN pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cpu
 
 # Install Detectron2 CPU-only with minimal dependencies
 ENV FORCE_CUDA="0"
 ENV TORCH_CUDA_ARCH_LIST=""
 
-# Install pycocotools BEFORE detectron2 (detectron2 depends on it)
+# Install pycocotools BEFORE detectron2
 RUN pip install --no-cache-dir pycocotools
 
 # Install detectron2
 RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
 
-# Install remaining dependencies
-RUN pip install --no-cache-dir \
-    opencv-python \
+# Install remaining dependencies (avoiding numpy upgrades)
+RUN pip install --no-cache-dir --no-deps \
+    opencv-python-headless \
     fastapi \
-    uvicorn[standard] \
     python-multipart \
     boto3 \
     botocore \
     pydantic \
     pydantic-settings \
-    python-dotenv \
-    ultralytics
+    python-dotenv
+
+# Install uvicorn separately with its dependencies
+RUN pip install --no-cache-dir uvicorn[standard]
+
+# Install ultralytics WITHOUT allowing it to upgrade numpy
+RUN pip install --no-cache-dir --upgrade --no-deps ultralytics && \
+    pip install --no-cache-dir \
+    matplotlib \
+    pillow \
+    pyyaml \
+    requests \
+    scipy \
+    tqdm \
+    psutil \
+    py-cpuinfo \
+    thop \
+    pandas \
+    seaborn
+
+# Force NumPy back to 1.x in case something upgraded it
+RUN pip install --no-cache-dir --force-reinstall "numpy>=1.21.0,<2.0"
 
 
 # Final stage - minimal runtime image
