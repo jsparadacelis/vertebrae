@@ -16,17 +16,28 @@ services:
 
       # S3 configuration
       - S3_BUCKET=${S3_BUCKET:-vertebrae-artifacts}
-      - S3_MODEL_KEY=${S3_MODEL_KEY:-model_final.pth}
+      - MODEL_CACHE_DIR=/tmp/model_cache
+
+      # Model selection
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-yolo}
+
+      # YOLO model
+      - YOLO_MODEL_KEY=${YOLO_MODEL_KEY:-yolo_best.pt}
+
+      # Mask R-CNN model
+      - MASKRCNN_MODEL_KEY=${MASKRCNN_MODEL_KEY:-model_final.pth}
+      - MASKRCNN_BACKBONE=${MASKRCNN_BACKBONE:-COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml}
 
       # API configuration
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - API_WORKERS=${API_WORKERS:-1}
 
-      # Model configuration
+      # Model inference configuration
       - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.5}
       - NMS_THRESHOLD=${NMS_THRESHOLD:-0.5}
       - MAX_DETECTIONS=${MAX_DETECTIONS:-100}
+      - DEVICE=${DEVICE:-cpu}
 
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
