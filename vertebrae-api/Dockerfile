@@ -18,7 +18,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install PyTorch CPU-only (smaller) - version 2.2.0+ supports NumPy 2.x
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install Detectron2 CPU-only with minimal dependencies
 ENV FORCE_CUDA="0"
@@ -37,6 +36,8 @@ RUN pip install --no-cache-dir \
     pydantic-settings \
     python-dotenv \
     ultralytics
+
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
 
