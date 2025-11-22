@@ -1,78 +1,63 @@
-# Optimized Dockerfile for vertebrae segmentation API (CPU-only, minimal size)
+# ============================
+# Builder Image
+# ============================
 FROM python:3.10-slim as builder
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    FORCE_CUDA=0 \
+    TORCH_CUDA_ARCH_LIST=""
 
-# Install build dependencies (will be removed later)
+WORKDIR /app
+
+# ----------------------------
+# Install build tools
+# ----------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# ----------------------------
+# Python Dependencies
+# ----------------------------
 
-# Install NumPy 1.x FIRST - this is critical
-RUN pip install --no-cache-dir "numpy>=1.21.0,<2.0"
+# Create a requirements file inline for reproducibility
+# (You can replace this with COPY requirements.txt if you prefer)
+RUN echo "\
+numpy>=1.21.0,<2.0\n\
+pycocotools\n\
+torch==2.1.2\n\
+torchvision==0.16.2\n\
+uvicorn[standard]\n\
+" > /tmp/requirements.txt
 
-# Install PyTorch CPU-only (specify version that works with NumPy 1.x)
-RUN pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cpu
+# Install base deps — detectron2 comes afterwards
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Install Detectron2 CPU-only with minimal dependencies
-ENV FORCE_CUDA="0"
-ENV TORCH_CUDA_ARCH_LIST=""
+# Install detectron2 (CPU-only)
+RUN pip install --no-cache-dir --no-build-isolation \
+    'git+https://github.com/facebookresearch/detectron2.git'
 
-# Install pycocotools BEFORE detectron2
-RUN pip install --no-cache-dir pycocotools
+# ----------------------------
+# Copy just the application
+# ----------------------------
+COPY app/ ./app/
 
-# Install detectron2
-RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
-
-# # Install remaining dependencies (avoiding numpy upgrades)
-# RUN pip install --no-cache-dir --no-deps \
-#     opencv-python-headless \
-#     fastapi \
-#     python-multipart \
-#     boto3 \
-#     botocore \
-#     pydantic \
-#     pydantic-settings \
-#     python-dotenv
-
-# Install uvicorn separately with its dependencies
-RUN pip install --no-cache-dir uvicorn[standard]
-
-# # Install ultralytics WITHOUT allowing it to upgrade numpy
-# RUN pip install --no-cache-dir --upgrade --no-deps ultralytics && \
-#     pip install --no-cache-dir \
-#     matplotlib \
-#     pillow \
-#     pyyaml \
-#     requests \
-#     scipy \
-#     tqdm \
-#     psutil \
-#     py-cpuinfo \
-#     thop \
-#     pandas \
-#     seaborn
-
-# Force NumPy back to 1.x in case something upgraded it
-# RUN pip install --no-cache-dir --force-reinstall "numpy>=1.21.0,<2.0"
-
-
-# Final stage - minimal runtime image
+# ============================
+# Runtime Image
+# ============================
 FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install only runtime dependencies (much smaller)
+WORKDIR /app
+
+# Runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libsm6 \
@@ -82,22 +67,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
-# Copy Python packages from builder
-COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+# Copy only what is needed from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages \
+                   /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app/app ./app
 
-# Copy application code
-COPY app/ ./app/
-
-# Create model cache directory
+# Create writable model cache
 RUN mkdir -p /tmp/model_cache && chmod 777 /tmp/model_cache
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app /tmp/model_cache
-
+# Non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app /tmp/model_cache
 USER appuser
 
 EXPOSE 8000
