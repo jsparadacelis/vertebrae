@@ -78,6 +78,10 @@ COPY app/ ./app/
 # --- Model cache directory ---
 RUN mkdir -p /tmp/model_cache && chmod 777 /tmp/model_cache
 
+# --- Copy pre-downloaded models into the image ---
+COPY models/yolo_model.pt /tmp/model_cache/yolo_model.pt
+COPY models/maskrcnn_model.pth /tmp/model_cache/maskrcnn_model.pth
+
 # --- Create non-root user ---
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app /tmp/model_cache

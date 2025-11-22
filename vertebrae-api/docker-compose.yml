@@ -39,13 +39,8 @@ services:
 
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      # Mount model cache to persist downloads
-      - model-cache:/tmp/model_cache
-
-      # Mount local models directory (pre-downloaded from S3)
-      - ./models:/tmp/model_cache
-
+    # volumes:
+      # Models are now baked into the Docker image
       # Optional: mount local code for development (comment out for production)
       # - ./app:/app/app
     restart: unless-stopped
@@ -55,7 +50,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-
-volumes:
-  model-cache:
-    driver: local
