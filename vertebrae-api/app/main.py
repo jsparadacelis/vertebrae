@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from app.config import get_settings
@@ -54,6 +55,15 @@ app = FastAPI(
     description="Multi-model API for vertebrae segmentation (T1-T12, L1-L5) supporting YOLO and Mask R-CNN",
     version="0.2.0",
     lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
