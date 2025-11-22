@@ -17,16 +17,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install PyTorch CPU-only (smaller) - version 2.2.0+ supports NumPy 2.x
+# Install PyTorch CPU-only FIRST (this will install numpy as a dependency)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Pin NumPy to 1.x to avoid compatibility issues with pycocotools and detectron2
+RUN pip install --no-cache-dir "numpy<2.0"
 
 # Install Detectron2 CPU-only with minimal dependencies
 ENV FORCE_CUDA="0"
 ENV TORCH_CUDA_ARCH_LIST=""
 
-# Install remaining dependencies (PyTorch 2.2.0+ handles NumPy 2.x automatically)
+# Install pycocotools BEFORE detectron2 (detectron2 depends on it)
+RUN pip install --no-cache-dir pycocotools
+
+# Install detectron2
+RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
+
+# Install remaining dependencies
 RUN pip install --no-cache-dir \
     opencv-python \
-    pycocotools \
     fastapi \
     uvicorn[standard] \
     python-multipart \
@@ -36,10 +45,6 @@ RUN pip install --no-cache-dir \
     pydantic-settings \
     python-dotenv \
     ultralytics
-
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
 
 
 # Final stage - minimal runtime image
