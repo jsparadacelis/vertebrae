@@ -33,37 +33,37 @@ RUN pip install --no-cache-dir pycocotools
 # Install detectron2
 RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
 
-# Install remaining dependencies (avoiding numpy upgrades)
-RUN pip install --no-cache-dir --no-deps \
-    opencv-python-headless \
-    fastapi \
-    python-multipart \
-    boto3 \
-    botocore \
-    pydantic \
-    pydantic-settings \
-    python-dotenv
+# # Install remaining dependencies (avoiding numpy upgrades)
+# RUN pip install --no-cache-dir --no-deps \
+#     opencv-python-headless \
+#     fastapi \
+#     python-multipart \
+#     boto3 \
+#     botocore \
+#     pydantic \
+#     pydantic-settings \
+#     python-dotenv
 
 # Install uvicorn separately with its dependencies
 RUN pip install --no-cache-dir uvicorn[standard]
 
-# Install ultralytics WITHOUT allowing it to upgrade numpy
-RUN pip install --no-cache-dir --upgrade --no-deps ultralytics && \
-    pip install --no-cache-dir \
-    matplotlib \
-    pillow \
-    pyyaml \
-    requests \
-    scipy \
-    tqdm \
-    psutil \
-    py-cpuinfo \
-    thop \
-    pandas \
-    seaborn
+# # Install ultralytics WITHOUT allowing it to upgrade numpy
+# RUN pip install --no-cache-dir --upgrade --no-deps ultralytics && \
+#     pip install --no-cache-dir \
+#     matplotlib \
+#     pillow \
+#     pyyaml \
+#     requests \
+#     scipy \
+#     tqdm \
+#     psutil \
+#     py-cpuinfo \
+#     thop \
+#     pandas \
+#     seaborn
 
 # Force NumPy back to 1.x in case something upgraded it
-RUN pip install --no-cache-dir --force-reinstall "numpy>=1.21.0,<2.0"
+# RUN pip install --no-cache-dir --force-reinstall "numpy>=1.21.0,<2.0"
 
 
 # Final stage - minimal runtime image
