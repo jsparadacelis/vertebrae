@@ -38,9 +38,11 @@ RUN pip install \
     python-multipart \
     uvicorn[standard] \
     pydantic \
+    opencv-python \
     pydantic-settings \
     python-dotenv \
-    boto3
+    boto3 \
+    ultralytics
 
 # --- FINAL FIX: force reinstall correct NumPy (ensures no package upgraded it) ---
 RUN pip install --force-reinstall "numpy>=1.21,<2.0"

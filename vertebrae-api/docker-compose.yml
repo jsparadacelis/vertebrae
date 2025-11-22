@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   vertebrae-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: vertebrae-api:optimized
     container_name: vertebrae-segmentation-api
     ports:
       - "${API_PORT:-8000}:8000"
