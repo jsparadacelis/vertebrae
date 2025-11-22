@@ -23,7 +23,6 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 # Install Detectron2 CPU-only with minimal dependencies
 ENV FORCE_CUDA="0"
 ENV TORCH_CUDA_ARCH_LIST=""
-RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
 
 # Install remaining dependencies (PyTorch 2.2.0+ handles NumPy 2.x automatically)
 RUN pip install --no-cache-dir \
@@ -38,6 +37,9 @@ RUN pip install --no-cache-dir \
     pydantic-settings \
     python-dotenv \
     ultralytics
+
+RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
+
 
 # Final stage - minimal runtime image
 FROM python:3.10-slim
