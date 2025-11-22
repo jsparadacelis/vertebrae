@@ -28,7 +28,8 @@ RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/face
 # Install remaining dependencies
 RUN pip install --no-cache-dir \
     opencv-python-headless==4.9.0.80 \
-    pycocotools==2.0.7 \
+    numpy \
+    Cython \
     fastapi==0.109.0 \
     uvicorn[standard]==0.27.0 \
     python-multipart==0.0.6 \
@@ -38,6 +39,9 @@ RUN pip install --no-cache-dir \
     pydantic-settings==2.1.0 \
     python-dotenv==1.0.0 \
     ultralytics==8.1.0
+
+# Rebuild pycocotools from source to compile against NumPy 2.x
+RUN pip install --no-cache-dir --no-build-isolation --force-reinstall pycocotools==2.0.7
 
 # Final stage - minimal runtime image
 FROM python:3.10-slim
