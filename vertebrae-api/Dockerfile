@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install PyTorch CPU-only (smaller) - version 2.2.0+ supports NumPy 2.x
-RUN pip install --no-cache-dir torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Install Detectron2 CPU-only with minimal dependencies
 ENV FORCE_CUDA="0"
@@ -27,17 +27,17 @@ RUN pip install --no-cache-dir --no-build-isolation 'git+https://github.com/face
 
 # Install remaining dependencies (PyTorch 2.2.0+ handles NumPy 2.x automatically)
 RUN pip install --no-cache-dir \
-    opencv-python-headless==4.9.0.80 \
-    pycocotools==2.0.7 \
-    fastapi==0.109.0 \
-    uvicorn[standard]==0.27.0 \
-    python-multipart==0.0.6 \
-    boto3==1.34.34 \
-    botocore==1.34.34 \
-    pydantic==2.5.3 \
-    pydantic-settings==2.1.0 \
-    python-dotenv==1.0.0 \
-    ultralytics==8.1.0
+    opencv-python \
+    pycocotools \
+    fastapi \
+    uvicorn[standard] \
+    python-multipart \
+    boto3 \
+    botocore \
+    pydantic \
+    pydantic-settings \
+    python-dotenv \
+    ultralytics
 
 # Final stage - minimal runtime image
 FROM python:3.10-slim
