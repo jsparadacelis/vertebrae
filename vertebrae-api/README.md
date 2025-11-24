@@ -1,148 +1,206 @@
-# Vertebrae Segmentation API
+# API de Segmentación de Vértebras
 
-FastAPI-based REST API for vertebrae segmentation using Mask R-CNN with Detectron2. Detects and segments 17 vertebrae classes (T1-T12, L1-L5) from X-ray or medical images.
+API REST desarrollada en FastAPI. Modelos: **YOLOv8** y **Mask R-CNN**. Segmenta 17 clases de vértebras (T1-T12, L1-L5) en radiografías de columna.
 
-## Features
+## Características
 
-- **Mask R-CNN** with ResNet-50 FPN backbone
-- **17 vertebrae classes**: T1-T12 (thoracic), L1-L5 (lumbar)
-- **CPU inference** for broad compatibility
-- **S3 model storage** with automatic download and caching
-- **Multiple endpoints**: JSON predictions, visualized images, health checks
-- **Docker deployment** for easy deployment
-- **RLE mask encoding** for efficient JSON serialization
+- **Soporte multi-modelo**: YOLOv8 (Ultralytics) y Mask R-CNN (Detectron2)
+- **17 clases de vértebras**: T1-T12 (torácicas), L1-L5 (lumbares)
+- **Inferencia en CPU**
+- **Almacenamiento en S3** con descarga automática y almacenamiento en caché
+- **Múltiples endpoints**: Predicciones JSON e imágenes visualizadas.
 
-## Architecture
+## Arquitectura
 
 ```
 vertebrae-api/
 ├── app/
-│   ├── main.py          # FastAPI app with endpoints
-│   ├── config.py        # Configuration management
-│   ├── model.py         # Detectron2 model wrapper
-│   ├── schemas.py       # Pydantic models
-│   └── utils.py         # S3, image processing, mask encoding
-├── tests/
-│   └── test_api.py      # API endpoint tests
-├── Dockerfile           # Container definition
-├── docker-compose.yml   # Docker Compose configuration
-├── requirements.txt     # Python dependencies
-└── .env                 # Environment variables (create from .env.example)
+│   ├── main.py              # Aplicación FastAPI con endpoints
+│   ├── config.py            # Gestión de configuración
+│   ├── services.py          # Capa de lógica de negocio
+│   ├── schemas.py           # Modelos Pydantic para validación
+│   ├── utils.py             # S3, procesamiento de imágenes
+│   └── models/
+│       ├── __init__.py      
+│       ├── base.py          # Interfaz base para modelos
+│       ├── factory.py       # Factoría y gestión de modelos
+│       ├── yolo.py          # Implementación YOLOv8
+│       └── maskrcnn.py      # Implementación Mask R-CNN
+├── Dockerfile               # Definición del contenedor
+├── docker-compose.yml       # Configuración Docker Compose
+├── requirements.txt         # Dependencias Python
+└── .env.example             # Plantilla de variables de entorno
 ```
 
-## Prerequisites
+## Prerequisitos
 
 - Python 3.10+
-- Docker and Docker Compose (for containerized deployment)
-- AWS credentials with S3 access
-- Model file in S3: `s3://vertebrae-artifacts/model_final.pth`
+- Docker y Docker Compose (para despliegue en contenedor)
+- Credenciales AWS con acceso a S3 (opcional si los modelos están en caché local)
+- Archivos de modelos en S3:
+  - YOLOv8: `s3://vertebrae-artifacts/yolo_best.pt`
+  - Mask R-CNN: `s3://vertebrae-artifacts/model_final.pth`
 
-## Installation
+## Instalación
 
-### 1. Clone and Setup
+### 1. Clonar y Configurar
 
 ```bash
 cd vertebrae-api
 cp .env.example .env
 ```
 
-### 2. Configure Environment Variables
+### 2. Configurar Variables de Entorno
 
-Edit `.env` with your AWS credentials and configuration:
+Edite `.env` con su configuración:
 
 ```bash
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your_access_key_here
-AWS_SECRET_ACCESS_KEY=your_secret_key_here
-AWS_REGION=us-east-1
-
-# S3 Model Configuration
+# Configuración S3
 S3_BUCKET=vertebrae-artifacts
-S3_MODEL_KEY=model_final.pth
+MODEL_CACHE_DIR=/tmp/model_cache
+
+# Selección de Modelo (yolo o maskrcnn)
+DEFAULT_MODEL=yolo
+
+# Configuración Modelo YOLO
+YOLO_MODEL_KEY=yolo_best.pt
+
+# Configuración Modelo Mask R-CNN
+MASKRCNN_MODEL_KEY=model_final.pth
+MASKRCNN_BACKBONE=COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml
+
+# Configuración API
+API_HOST=0.0.0.0
+API_PORT=8000
+API_WORKERS=1
+
+# Configuración de Inferencia del Modelo
+CONFIDENCE_THRESHOLD=0.5
+NMS_THRESHOLD=0.5
+MAX_DETECTIONS=100
+DEVICE=cpu
+
+# Registro
+LOG_LEVEL=INFO
 ```
 
-### 3. Option A: Docker Deployment (Recommended)
+### 3. Opción A: Despliegue con Docker (Recomendado)
 
 ```bash
-# Build and run with Docker Compose
+# Construir y ejecutar con Docker Compose
 docker-compose up --build
 
-# Or with Docker directly
+# O con Docker directamente
 docker build -t vertebrae-api .
 docker run -p 8000:8000 --env-file .env vertebrae-api
 ```
 
-### 3. Option B: Local Development
+### 3. Opción B: Desarrollo Local
 
 ```bash
-# Create virtual environment
+# Crear entorno virtual
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# Install dependencies
+# Instalar dependencias usando el script de instalación (recomendado)
+chmod +x install.sh
+./install.sh
+
+# O instalar manualmente (requiere orden específico)
+# 1. Instalar PyTorch primero
+pip install torch==2.1.2 torchvision==0.16.2
+
+# 2. Instalar Detectron2 (requiere --no-build-isolation)
+pip install --no-build-isolation 'git+https://github.com/facebookresearch/detectron2.git'
+
+# 3. Instalar dependencias restantes
 pip install -r requirements.txt
 
-# Run the API
+# Ejecutar la API
 python -m app.main
+
+# O con uvicorn
+uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`
+**Nota**: El script [install.sh](install.sh) maneja el orden correcto de instalación para todas las dependencias, especialmente Detectron2 que requiere flags especiales.
 
-## API Endpoints
+La API estará disponible en `http://localhost:8000`
 
-### 1. Root Information
+## Endpoints de la API
+
+### 1. Información Raíz
 ```bash
 GET /
 ```
 
-Returns API information and available endpoints.
+Devuelve información de la API, modelos soportados y endpoints disponibles.
 
-### 2. Health Check
-```bash
-GET /health
-```
-
-**Response:**
+**Respuesta:**
 ```json
 {
-  "status": "healthy",
-  "model_loaded": true,
-  "model_path": "/tmp/model_cache/model_final.pth"
+  "name": "Vertebrae Segmentation API",
+  "version": "0.2.0",
+  "description": "Multi-model segmentation for 17 vertebrae classes",
+  "supported_models": ["yolo", "maskrcnn"],
+  "default_model": "yolo"
 }
 ```
 
-### 3. Model Information
+### 2. Información de Todos los Modelos
 ```bash
-GET /model-info
+GET /models
 ```
 
-**Response:**
+Obtiene información sobre todos los modelos cargados.
+
+**Respuesta:**
 ```json
 {
-  "model_name": "Mask R-CNN",
-  "num_classes": 17,
-  "classes": ["T1", "T2", ..., "L5"],
-  "backbone": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
-  "device": "cpu",
-  "confidence_threshold": 0.5,
-  "nms_threshold": 0.5
+  "models": {
+    "yolo": {
+      "model_name": "YOLOv8-seg",
+      "model_type": "yolo",
+      "num_classes": 17,
+      "classes": ["T1", "T2", ..., "L5"],
+      "backbone": "YOLOv8",
+      "device": "cpu",
+      "confidence_threshold": 0.5,
+      "nms_threshold": 0.5,
+      "framework": "Ultralytics"
+    },
+    "maskrcnn": {
+      "model_name": "Mask R-CNN",
+      "model_type": "maskrcnn",
+      "num_classes": 17,
+      "classes": ["T1", "T2", ..., "L5"],
+      "backbone": "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
+      "device": "cpu",
+      "confidence_threshold": 0.5,
+      "nms_threshold": 0.5,
+      "framework": "Detectron2"
+    }
+  },
+  "default_model": "yolo"
 }
 ```
 
-### 4. Predict (JSON Response)
+### 5. Predicción (Respuesta JSON)
 ```bash
 POST /predict
+POST /predict?model=yolo
+POST /predict?model=maskrcnn
 ```
 
-Upload an image and receive JSON predictions with bounding boxes, masks (RLE), scores, and classes.
+Suba una imagen y reciba predicciones JSON con cajas delimitadoras, máscaras (RLE), puntuaciones y clases.
 
-**Request:**
+**Solicitud:**
 ```bash
-curl -X POST "http://localhost:8000/predict" \
+curl -X POST "http://localhost:8000/predict?model=yolo" \
   -F "file=@spine_xray.jpg"
 ```
 
-**Response:**
+**Respuesta:**
 ```json
 {
   "detections": [
@@ -160,199 +218,98 @@ curl -X POST "http://localhost:8000/predict" \
       "score": 0.95,
       "class_name": "T1",
       "class_id": 0
-    },
-    ...
+    }
   ],
   "num_detections": 14,
   "image_shape": [512, 512, 3],
-  "processing_time_ms": 234.56
+  "processing_time_ms": 234.56,
+  "model_used": "yolo"
 }
 ```
 
-### 5. Predict with Visualization
+### 6. Predicción con Visualización
 ```bash
 POST /predict/visualize
+POST /predict/visualize?model=yolo
+POST /predict/visualize?model=maskrcnn
 ```
 
-Upload an image and receive an annotated PNG image with bounding boxes, masks, and labels.
+Al subir una imágen el API devuelve la imágen anotada.
 
-**Request:**
+**Solicitud:**
 ```bash
-curl -X POST "http://localhost:8000/predict/visualize" \
+curl -X POST "http://localhost:8000/predict/visualize?model=maskrcnn" \
   -F "file=@spine_xray.jpg" \
   --output annotated.png
 ```
 
-**Response:**
+**Respuesta:**
 - Content-Type: `image/png`
-- Headers:
-  - `X-Num-Detections`: Number of detected vertebrae
-  - `X-Processing-Time-Ms`: Inference time in milliseconds
+- Encabezados:
+  - `X-Num-Detections`: Número de vértebras detectadas
+  - `X-Processing-Time-Ms`: Tiempo de inferencia en milisegundos
+  - `X-Model-Used`: Modelo usado para la inferencia
 
-## Usage Examples
+## Configuración de Modelos
 
-### Python Client
+Los modelos se configuran en [app/config.py](app/config.py) y pueden personalizarse mediante variables de entorno:
 
-```python
-import requests
-
-# Predict with JSON response
-with open("spine_xray.jpg", "rb") as f:
-    response = requests.post(
-        "http://localhost:8000/predict",
-        files={"file": f}
-    )
-    predictions = response.json()
-
-print(f"Found {predictions['num_detections']} vertebrae")
-for det in predictions['detections']:
-    print(f"{det['class_name']}: {det['score']:.2f}")
-
-# Get visualized result
-with open("spine_xray.jpg", "rb") as f:
-    response = requests.post(
-        "http://localhost:8000/predict/visualize",
-        files={"file": f}
-    )
-    with open("annotated.png", "wb") as out:
-        out.write(response.content)
-```
-
-### cURL Examples
-
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Model info
-curl http://localhost:8000/model-info
-
-# Predict
-curl -X POST http://localhost:8000/predict \
-  -F "file=@image.jpg" \
-  -o predictions.json
-
-# Visualize
-curl -X POST http://localhost:8000/predict/visualize \
-  -F "file=@image.jpg" \
-  -o annotated.png
-```
-
-## Model Configuration
-
-The model is configured in `app/config.py` and can be customized via environment variables:
-
-| Variable | Default | Description |
+| Variable | Valor por defecto | Descripción |
 |----------|---------|-------------|
-| `CONFIDENCE_THRESHOLD` | 0.5 | Minimum confidence score for detections |
-| `NMS_THRESHOLD` | 0.5 | Non-maximum suppression threshold |
-| `MAX_DETECTIONS` | 100 | Maximum number of detections per image |
-| `MODEL_CACHE_DIR` | `/tmp/model_cache` | Directory for caching downloaded model |
+| `DEFAULT_MODEL` | `yolo` | Modelo predeterminado a usar (`yolo` o `maskrcnn`) |
+| `YOLO_MODEL_KEY` | `yolo_best.pt` | Clave S3 para pesos del modelo YOLO |
+| `MASKRCNN_MODEL_KEY` | `model_final.pth` | Clave S3 para pesos de Mask R-CNN |
+| `MASKRCNN_BACKBONE` | `COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml` | Configuración Detectron2 |
+| `CONFIDENCE_THRESHOLD` | `0.5` | Puntuación de confianza mínima para detecciones |
+| `NMS_THRESHOLD` | `0.5` | Umbral de supresión no máxima |
+| `MAX_DETECTIONS` | `100` | Número máximo de detecciones por imagen |
+| `MODEL_CACHE_DIR` | `/tmp/model_cache` | Directorio para almacenar en caché modelos descargados |
+| `DEVICE` | `cpu` | Dispositivo para inferencia (`cpu` o `cuda`) |
 
-## Development
+## Desarrollo
 
-### Running Tests
+### Estructura del Proyecto
 
-```bash
-# Install test dependencies
-pip install pytest pytest-cov httpx
+La API sigue una arquitectura modular:
 
-# Run tests
-pytest tests/ -v
+- **[app/main.py](app/main.py)**: Aplicación FastAPI con definiciones de endpoints
+- **[app/services.py](app/services.py)**: Capa de lógica de negocio que maneja predicciones y visualizaciones
+- **[app/models/](app/models/)**: Implementaciones de modelos
+  - **[base.py](app/models/base.py)**: Clase base abstracta para todos los modelos
+  - **[factory.py](app/models/factory.py)**: Factoría de modelos para gestionar múltiples modelos
+  - **[yolo.py](app/models/yolo.py)**: Implementación YOLOv8 usando Ultralytics
+  - **[maskrcnn.py](app/models/maskrcnn.py)**: Implementación Mask R-CNN usando Detectron2
+- **[app/utils.py](app/utils.py)**: Funciones de utilidad para S3, procesamiento de imágenes y codificación de máscaras
+- **[app/schemas.py](app/schemas.py)**: Modelos Pydantic para validación de solicitudes/respuestas
+- **[app/config.py](app/config.py)**: Gestión de configuración usando Pydantic settings
 
-# With coverage
-pytest tests/ --cov=app --cov-report=html
-```
 
-### API Documentation
+## Rendimiento
 
-Interactive API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+### YOLOv8
+- **Inferencia CPU**: ~150-300ms por imagen (512x512)
+- **Inferencia GPU**: ~20-50ms por imagen
+- **Tamaño del Modelo**: ~50-100MB (depende de la variante)
+- **Uso de Memoria**: ~1-2GB RAM
 
-## Mask Encoding
+### Mask R-CNN
+- **Inferencia CPU**: ~300-600ms por imagen (512x512)
+- **Inferencia GPU**: ~50-100ms por imagen
+- **Tamaño del Modelo**: ~170MB
+- **Uso de Memoria**: ~2-3GB RAM
 
-Segmentation masks are encoded using Run-Length Encoding (RLE) in COCO format for efficient JSON serialization:
+Para inferencia más rápida, configure `DEVICE=cuda` en `.env` y asegúrese de que CUDA esté disponible.
 
-```python
-{
-  "size": [height, width],
-  "counts": "encoded_string"
-}
-```
+### Modelos Soportados
 
-To decode masks in Python:
+| Modelo | Framework | Fortalezas | Caso de Uso |
+|-------|-----------|-----------|----------|
+| **YOLOv8** | Ultralytics | Inferencia rápida, menor memoria | Aplicaciones en tiempo real, entornos con recursos limitados |
+| **Mask R-CNN** | Detectron2 | Alta precisión, máscaras detalladas | Aplicaciones críticas en precisión, investigación |
 
-```python
-from pycocotools import mask as mask_util
-import numpy as np
-
-def decode_mask(rle_dict):
-    # Convert string to bytes if needed
-    if isinstance(rle_dict['counts'], str):
-        rle_dict['counts'] = rle_dict['counts'].encode('utf-8')
-    return mask_util.decode(rle_dict)
-
-# Usage
-mask_binary = decode_mask(detection['mask'])
-```
-
-## Performance
-
-- **CPU Inference**: ~200-500ms per image (512x512)
-- **Model Size**: ~170MB
-- **Memory Usage**: ~2-3GB RAM
-
-For faster inference, modify `DEVICE=cuda` in `.env` and use a GPU-enabled Docker image.
-
-## Troubleshooting
-
-### Model Download Fails
-- Verify AWS credentials in `.env`
-- Check S3 bucket permissions
-- Ensure model exists at `s3://vertebrae-artifacts/model_final.pth`
-
-### Out of Memory
-- Reduce `MAX_DETECTIONS`
-- Use smaller input images
-- Increase Docker memory limit
-
-### Slow Inference
-- CPU inference is slower than GPU
-- Consider using smaller images
-- For production, use GPU-enabled deployment
-
-## Deployment
-
-### Production Recommendations
-
-1. **Use GPU**: Set `DEVICE=cuda` for faster inference
-2. **Load Balancing**: Deploy multiple instances behind a load balancer
-3. **Monitoring**: Add logging and monitoring (Prometheus, Grafana)
-4. **Secrets Management**: Use AWS Secrets Manager or similar for credentials
-5. **Rate Limiting**: Implement rate limiting for API endpoints
-6. **HTTPS**: Deploy behind a reverse proxy with SSL (nginx, Traefik)
-
-### Example nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name vertebrae-api.example.com;
-
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        client_max_body_size 10M;
-    }
-}
-```
-
-## License
-
-This project is part of the vertebrae segmentation system.
-
-## Support
-
-For issues or questions, please contact the development team or open an issue in the repository.
+### Diseño de la API
+- **RESTful**: Métodos y códigos de estado HTTP estándar
+- **Validación**: Esquemas Pydantic para validación de solicitudes/respuestas
+- **CORS Habilitado**: Listo para integración con aplicaciones web
+- **Documentación Interactiva**: Swagger UI y ReDoc disponibles
+- **Manejo de Errores**: Mensajes de error completos y excepciones HTTP
