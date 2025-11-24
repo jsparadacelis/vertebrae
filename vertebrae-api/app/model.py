@@ -9,27 +9,23 @@ from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor
 
 from app.config import get_settings
-from app.utils import download_model_from_s3, encode_mask_to_rle
+from app.utils import download_model_from_s3
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 class VertebraeSegmentationModel:
-    """Singleton class for Mask R-CNN vertebrae segmentation model."""
-
     _instance: Optional['VertebraeSegmentationModel'] = None
     _predictor: Optional[DefaultPredictor] = None
     _model_loaded: bool = False
 
     def __new__(cls):
-        """Implement singleton pattern."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
-        """Initialize the model (only once due to singleton)."""
         if not self._model_loaded:
             self.load_model()
 
@@ -71,18 +67,6 @@ class VertebraeSegmentationModel:
             raise RuntimeError(f"Model initialization failed: {e}")
 
     def predict(self, image: np.ndarray) -> Dict[str, Any]:
-        """
-        Run inference on an image.
-
-        Args:
-            image: Input image as numpy array in BGR format.
-
-        Returns:
-            Dictionary containing predictions with bounding boxes, masks, scores, and classes.
-
-        Raises:
-            RuntimeError: If model is not loaded or inference fails.
-        """
         if not self._model_loaded or self._predictor is None:
             raise RuntimeError("Model not loaded. Call load_model() first.")
 
@@ -117,15 +101,6 @@ class VertebraeSegmentationModel:
             raise RuntimeError(f"Prediction failed: {e}")
 
     def format_detections(self, predictions: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Format raw predictions into structured detection objects.
-
-        Args:
-            predictions: Raw predictions from model.
-
-        Returns:
-            List of formatted detection dictionaries.
-        """
         detections = []
 
         boxes = predictions["boxes"]
@@ -142,9 +117,6 @@ class VertebraeSegmentationModel:
             # Get class name
             class_name = settings.vertebrae_classes[class_id]
 
-            # Encode mask to RLE
-            mask_rle = encode_mask_to_rle(mask)
-
             detection = {
                 "bbox": {
                     "x1": float(box[0]),
@@ -152,7 +124,7 @@ class VertebraeSegmentationModel:
                     "x2": float(box[2]),
                     "y2": float(box[3])
                 },
-                "mask": mask_rle,
+                "mask": mask.tolist(),
                 "score": float(score),
                 "class_name": class_name,
                 "class_id": int(class_id)
@@ -163,11 +135,9 @@ class VertebraeSegmentationModel:
         return detections
 
     def is_loaded(self) -> bool:
-        """Check if model is loaded."""
         return self._model_loaded
 
     def get_model_info(self) -> Dict[str, Any]:
-        """Get information about the loaded model."""
         return {
             "model_name": "Mask R-CNN",
             "num_classes": settings.num_classes,
@@ -180,5 +150,4 @@ class VertebraeSegmentationModel:
 
 
 def get_model() -> VertebraeSegmentationModel:
-    """Get singleton instance of the vertebrae segmentation model."""
     return VertebraeSegmentationModel()

@@ -1,5 +1,3 @@
-"""FastAPI application for vertebrae segmentation with multiple model support."""
-
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -10,7 +8,13 @@ from fastapi.responses import Response
 
 from app.config import get_settings
 from app.models import initialize_all_models
-from app.services import SegmentationService
+from app.services import (
+    get_available_models,
+    get_specific_model_info,
+    predict_from_image_bytes,
+    predict_and_visualize,
+    check_health
+)
 from app.schemas import (
     PredictionResponse,
     Detection,
@@ -28,12 +32,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-segmentation_service = SegmentationService()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle manager for the application."""
     # Startup: Load all models
     logger.info("Starting up vertebrae segmentation API...")
     try:
@@ -69,7 +71,6 @@ app.add_middleware(
 
 @app.get("/", tags=["Root"])
 async def root():
-    """Root endpoint with API information."""
     return {
         "name": "Vertebrae Segmentation API",
         "version": "0.2.0",
@@ -93,13 +94,8 @@ async def root():
     summary="Health check endpoint"
 )
 async def health_check():
-    """
-    Check if the API and models are healthy.
+    health_status = check_health()
 
-    Returns:
-        Health status with model loading state.
-    """
-    health_status = segmentation_service.check_health()
     return HealthResponse(**health_status)
 
 
@@ -110,17 +106,13 @@ async def health_check():
     summary="Get information about all available models"
 )
 async def get_models_info():
-    """
-    Get information about all loaded models.
-
-    Returns:
-        Information about all available models.
-    """
     try:
-        models_info = segmentation_service.get_available_models()
+        models_info = get_available_models()
+
         return ModelsInfoResponse(**models_info)
     except Exception as e:
         logger.error(f"Failed to get models info: {e}")
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve models information: {str(e)}"
@@ -136,25 +128,20 @@ async def get_models_info():
 async def get_model_info(
     model: Optional[str] = Query(None, description="Model type (yolo or maskrcnn)")
 ):
-    """
-    Get information about a specific model.
-
-    Args:
-        model: Model type to query (defaults to configured default).
-
-    Returns:
-        Model configuration and metadata.
-    """
     try:
-        info = segmentation_service.get_specific_model_info(model)
+        info = get_specific_model_info(model)
+
         return ModelInfo(**info)
     except ValueError as e:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid model type: {str(e)}"
         )
+    
     except Exception as e:
         logger.error(f"Failed to get model info: {e}")
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve model information: {str(e)}"
@@ -176,21 +163,7 @@ async def predict(
     file: UploadFile = File(..., description="Image file (JPEG, PNG, etc.)"),
     model: Optional[str] = Query(None, description="Model to use (yolo or maskrcnn, defaults to configured default)")
 ):
-    """
-    Run vertebrae segmentation on an uploaded image.
-
-    Args:
-        file: Uploaded image file.
-        model: Model type to use for inference.
-
-    Returns:
-        Predictions with bounding boxes, masks (RLE), scores, and class labels.
-
-    Raises:
-        HTTPException: If image is invalid or inference fails.
-    """
     try:
-        # Read image
         image_bytes = await file.read()
 
         if not image_bytes:
@@ -199,10 +172,8 @@ async def predict(
                 detail="Empty file uploaded"
             )
 
-        # Run prediction
-        result = segmentation_service.predict_from_image_bytes(image_bytes, model)
+        result = predict_from_image_bytes(image_bytes, model)
 
-        # Create response
         response = PredictionResponse(
             detections=[Detection(**det) for det in result["detections"]],
             num_detections=result["num_detections"],
@@ -246,19 +217,6 @@ async def predict_visualize(
     file: UploadFile = File(..., description="Image file (JPEG, PNG, etc.)"),
     model: Optional[str] = Query(None, description="Model to use (yolo or maskrcnn, defaults to configured default)")
 ):
-    """
-    Run vertebrae segmentation and return an annotated image.
-
-    Args:
-        file: Uploaded image file.
-        model: Model type to use for inference.
-
-    Returns:
-        PNG image with bounding boxes, masks, and labels drawn.
-
-    Raises:
-        HTTPException: If image is invalid or inference fails.
-    """
     try:
         # Read image
         image_bytes = await file.read()
@@ -270,7 +228,7 @@ async def predict_visualize(
             )
 
         # Run prediction and visualization
-        result = segmentation_service.predict_and_visualize(image_bytes, model)
+        result = predict_and_visualize(image_bytes, model)
 
         logger.info(f"Visualization successful using {result['model_used']}: {result['num_detections']} vertebrae annotated")
 

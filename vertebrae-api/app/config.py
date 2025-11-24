@@ -1,5 +1,3 @@
-"""Configuration management for the vertebrae segmentation API."""
-
 from functools import lru_cache
 from pathlib import Path
 from typing import List
@@ -8,7 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
 
     # AWS Configuration
     aws_access_key_id: str = ""
@@ -59,12 +56,10 @@ class Settings(BaseSettings):
     )
 
     def get_model_cache_path(self, filename: str) -> Path:
-        """Get the local path where a model should be cached."""
         self.model_cache_dir.mkdir(parents=True, exist_ok=True)
         return self.model_cache_dir / filename
 
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance."""
     return Settings()

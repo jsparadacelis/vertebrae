@@ -8,7 +8,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from app.config import get_settings
-from app.utils import download_model_from_s3, encode_mask_to_rle
+from app.utils import download_model_from_s3
 from app.models.base import BaseSegmentationModel
 
 logger = logging.getLogger(__name__)
@@ -152,9 +152,6 @@ class YOLOModel(BaseSegmentationModel):
             # Get class name
             class_name = settings.vertebrae_classes[class_id]
 
-            # Encode mask to RLE
-            mask_rle = encode_mask_to_rle(mask)
-
             detection = {
                 "bbox": {
                     "x1": float(box[0]),
@@ -162,7 +159,7 @@ class YOLOModel(BaseSegmentationModel):
                     "x2": float(box[2]),
                     "y2": float(box[3])
                 },
-                "mask": mask_rle,
+                "mask": mask.tolist(),
                 "score": float(score),
                 "class_name": class_name,
                 "class_id": int(class_id)

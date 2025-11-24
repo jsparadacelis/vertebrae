@@ -1,15 +1,14 @@
-"""Utility functions for S3, image processing, and mask encoding."""
+"""Utility functions for S3 and image processing."""
 
 import io
 import logging
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import List
 
 import boto3
 import cv2
 import numpy as np
 from PIL import Image
-from pycocotools import mask as mask_util
 
 from app.config import get_settings
 
@@ -97,44 +96,6 @@ def load_image_from_bytes(image_bytes: bytes) -> np.ndarray:
     except Exception as e:
         logger.error(f"Failed to load image: {e}")
         raise ValueError(f"Invalid image format: {e}")
-
-
-def encode_mask_to_rle(mask: np.ndarray) -> Dict[str, Any]:
-    """
-    Encode a binary mask to RLE (Run-Length Encoding) format.
-
-    Args:
-        mask: Binary mask as 2D numpy array (H, W).
-
-    Returns:
-        Dictionary with RLE encoding compatible with COCO format.
-    """
-    # Ensure mask is in correct format (Fortran order, uint8)
-    mask = np.asfortranarray(mask.astype(np.uint8))
-    rle = mask_util.encode(mask)
-
-    # Convert bytes to string for JSON serialization
-    rle['counts'] = rle['counts'].decode('utf-8')
-
-    return rle
-
-
-def decode_rle_to_mask(rle: Dict[str, Any]) -> np.ndarray:
-    """
-    Decode RLE format back to binary mask.
-
-    Args:
-        rle: RLE dictionary with 'size' and 'counts'.
-
-    Returns:
-        Binary mask as 2D numpy array.
-    """
-    # Convert string back to bytes if necessary
-    if isinstance(rle['counts'], str):
-        rle['counts'] = rle['counts'].encode('utf-8')
-
-    mask = mask_util.decode(rle)
-    return mask
 
 
 def draw_predictions_on_image(
