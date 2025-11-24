@@ -1,205 +1,153 @@
-# Vertebrae Segmentation Frontend (React)
+# Frontend de Segmentación de Vértebras (React)
 
-A modern React application for the Vertebrae Segmentation API, built with Vite for fast development and optimized production builds.
+Cliente WEB para la API de Segmentación de Vértebras, construida con Vite y React.
 
-## Features
+## Características
 
-- **Modern React**: Built with React 18+ and Vite
-- **Component-Based Architecture**: Modular, reusable components
-- **Real-time API Health Monitoring**: Automatic health checks every 30 seconds
-- **Drag-and-Drop Upload**: Intuitive image upload with visual feedback
-- **Model Selection**: Switch between YOLO and Mask R-CNN models
-- **Dual Analysis Modes**:
-  - **Analyze**: Get detailed JSON results with detection data
-  - **Visualize**: Get annotated images with drawn predictions
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
-- **Professional UI**: Clean, medical-grade interface with smooth animations
+- **React**
+- **Carga por Arrastrar y Soltar**: Carga intuitiva de imágenes con retroalimentación visual
+- **Selección de Modelo**: Cambia entre modelos YOLO y Mask R-CNN
+  - **Analizar**: Obtén resultados detallados en JSON con datos de detección
+  - **Visualizar**: Obtén imágenes anotadas con predicciones dibujadas
+- **Diseño Responsivo**: Funciona perfectamente en escritorio y teléfonos.
 
-## Tech Stack
+## Stack Tecnológico
 
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **CSS Modules** - Component-scoped styling
-- **Fetch API** - HTTP client for API calls
+- **React 18** - Framework WEB
+- **Vite** - Herramienta de construcción y servidor de desarrollo
+- **Fetch API** - Cliente HTTP para llamadas a la API
 
-## Prerequisites
+## Prerequisitos
 
-- Node.js 20.x or higher
-- npm or yarn
-- Vertebrae Segmentation API running (default: `http://localhost:8000`)
+- Node.js 20.x o superior
+- npm o yarn
+- API de Segmentación de Vértebras en ejecución local (predeterminado: `http://localhost:8000`)
 
-## Quick Start
+## Inicio Rápido
 
-### Installation
+### Instalación
 
 ```bash
-# Install dependencies
+# Instalar dependencias
 npm install
 
-# Copy environment variables
+# Copiar variables de entorno
 cp .env.example .env
 
-# Edit .env if your API is not at localhost:8000
-# VITE_API_URL=http://your-api-host:port
+# Editar .env si no se corre el api en localhost:8000
+# VITE_API_URL=http://tu-host-api:puerto
 ```
 
-### Development
+### Desarrollo
 
 ```bash
-# Start development server
+# Iniciar servidor de desarrollo
 npm run dev
 ```
 
-The app will open at `http://localhost:5173`
+La aplicación se abrirá en `http://localhost:5173`
 
-### Production Build
+### Compilación de Producción
 
 ```bash
-# Build for production
+# Compilar para producción
 npm run build
 
-# Preview production build
+# Previsualizar compilación de producción
 npm run preview
 ```
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 vertebrae-frontend-react/
 ├── src/
-│   ├── components/           # React components
-│   │   ├── StatusIndicator.jsx       # API health status
-│   │   ├── ModelSelector.jsx         # Model selection dropdown
-│   │   ├── ModelInfoModal.jsx        # Model info modal
-│   │   ├── ImageUpload.jsx           # Drag-and-drop upload
-│   │   ├── AnalysisActions.jsx       # Analysis buttons
-│   │   ├── Results.jsx               # Results display
-│   │   └── *.css                     # Component styles
-│   ├── services/            # API service layer
-│   │   └── api.js                    # API client
-│   ├── App.jsx              # Main app component
-│   ├── App.css              # App styles
-│   ├── main.jsx             # Entry point
-│   └── index.css            # Global styles
-├── .env                     # Environment variables
-├── .env.example             # Environment template
-├── package.json             # Dependencies
-├── vite.config.js           # Vite configuration
-└── README.md                # This file
+│   ├── components/           # Componentes de React
+│   │   ├── StatusIndicator.jsx       # Healthcheck de la api
+│   │   ├── ModelSelector.jsx         # Menú desplegable de selección de modelo
+│   │   ├── ModelInfoModal.jsx        # Modal de información del modelo
+│   │   ├── ImageUpload.jsx           # Carga por arrastrar y soltar
+│   │   ├── AnalysisActions.jsx       # Botones de análisis
+│   │   ├── Results.jsx               # Visualización de resultados
+│   │   └── *.css                     # Estilos de componentes
+│   ├── services/            # Capa de servicio de API
+│   │   └── api.js                    # Cliente de API
+│   ├── App.jsx              # Componente principal de la aplicación
+│   ├── App.css              # Estilos de la aplicación
+│   ├── main.jsx             # Punto de entrada
+│   └── index.css            # Estilos globales
+├── .env                     # Variables de entorno
+├── .env.example             # Plantilla de entorno
+├── package.json             # Dependencias
+├── vite.config.js           # Configuración de Vite
+└── README.md                # Este archivo
 ```
 
-## Usage
+## Uso
 
-### 1. Start the Application
+### 1. Iniciar la Aplicación
 
 ```bash
 npm run dev
 ```
 
-### 2. Check API Status
+### 2. Verificar Estado de la API
 
-The status indicator at the top shows:
-- **Green dot + "API Connected"**: API is healthy
-- **Red dot + "API Disconnected"**: Cannot reach API
+El indicador de estado en la parte superior muestra:
+- **Punto verde + "API Connected"**: La API está arriba
+- **Punto rojo + "API Disconnected"**: No se puede comunicar con la API
 
-### 3. Select Model
+### 3. Seleccionar Modelo
 
-Choose between:
-- **YOLO**: Faster inference, good for quick analysis
-- **Mask R-CNN**: Higher accuracy, better segmentation
+Elige entre:
+- **YOLO**: Inferencia más rápida, bueno para análisis rápido
+- **Mask R-CNN**: Mayor precisión, mejor segmentación
 
-Click "Model Info" for detailed specifications.
+Haz clic en "Model Info" para especificaciones detalladas.
 
-### 4. Upload Image
+### 4. Cargar Imagen
 
-**Drag & Drop**: Drag an image onto the upload zone
+**Arrastrar y Soltar**: Arrastra una imagen a la zona de carga
 
-**Browse**: Click "Browse Files" to select from file system
+**Explorar**: Haz clic en "Browse Files" para seleccionar del sistema de archivos
 
-Supported formats: JPEG, PNG
+Formatos soportados: JPEG, PNG
 
-### 5. Run Analysis
+### 5. Ejecutar Análisis
 
-**Analyze Image**: Get detailed JSON results
+**Analyze Image**: Puedes obtener la imágen con segmentaciónes y las métricas de confianza por cada vertebra
 
-**Get Annotated Image**: Get visual results with drawn predictions
+### 6. Ver Resultados
 
-### 6. View Results
+Los resultados muestran:
+- Número de vértebras detectadas
+- Tiempo de procesamiento
+- Modelo utilizado
+- Tabla detallada de todas las detecciones
+- Imagen anotada (si se visualizó)
 
-Results show:
-- Number of vertebrae detected
-- Processing time
-- Model used
-- Detailed table of all detections
-- Annotated image (if visualized)
+## Configuración
 
-## Configuration
+### Variables de Entorno
 
-### Environment Variables
-
-Create a `.env` file:
+Crea un archivo `.env`:
 
 ```bash
 VITE_API_URL=http://localhost:8000
 ```
 
-## Build and Deployment
+## Compilación y Despliegue
 
-### Production Build
+### Compilación de Producción
 
 ```bash
 npm run build
-```
-
-Creates optimized build in `dist/` directory.
-
-### Deploy to Netlify
-
-```bash
-npm install -g netlify-cli
-npm run build
-netlify deploy --prod --dir=dist
-```
-
-### Deploy to Vercel
-
-```bash
-npm install -g vercel
-vercel
-```
-
-## Troubleshooting
-
-### API Connection Issues
-
-1. Ensure API is running
-2. Check `.env` file has correct `VITE_API_URL`
-3. Verify CORS is enabled in the API
-
-### CORS Errors
-
-Ensure FastAPI has CORS middleware:
-
-```python
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 ```
 
 ## Scripts
 
 ```bash
-npm run dev       # Start development server
-npm run build     # Build for production
-npm run preview   # Preview production build
+npm run dev       # Iniciar servidor de desarrollo
+npm run build     # Compilar para producción
+npm run preview   # Previsualizar compilación de producción
 ```
-
-## License
-
-Part of the Vertebrae Segmentation project.
