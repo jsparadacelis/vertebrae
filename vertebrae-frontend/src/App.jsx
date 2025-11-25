@@ -40,12 +40,16 @@ function App() {
 
     setVisualizing(true);
     try {
-      // First get the visualization
-      const visualData = await api.predictVisualize(selectedFile, selectedModel);
+      // Run both requests in parallel for faster loading
+      const visualPromise = api.predictVisualize(selectedFile, selectedModel);
+      const detectionPromise = api.predict(selectedFile, selectedModel);
+
+      // Show the annotated image as soon as it's ready
+      const visualData = await visualPromise;
       setAnnotatedImage(visualData);
 
-      // Then get the detailed results for the table
-      const detectionData = await api.predict(selectedFile, selectedModel);
+      // Then show the metrics when they're ready
+      const detectionData = await detectionPromise;
       setResults(detectionData);
     } catch (error) {
       console.error('Visualization failed:', error);
