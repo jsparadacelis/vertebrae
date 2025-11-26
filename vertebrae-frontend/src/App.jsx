@@ -40,20 +40,18 @@ function App() {
 
     setVisualizing(true);
     try {
-      // Run both requests in parallel for faster loading
-      const visualPromise = api.predictVisualize(selectedFile, selectedModel);
-      const detectionPromise = api.predict(selectedFile, selectedModel);
+      // Run both requests in parallel
+      const [visualData, detectionData] = await Promise.all([
+        api.predictVisualize(selectedFile, selectedModel),
+        api.predict(selectedFile, selectedModel),
+      ]);
 
-      // Show the annotated image as soon as it's ready
-      const visualData = await visualPromise;
+      // Display both results at the same time
       setAnnotatedImage(visualData);
-
-      // Then show the metrics when they're ready
-      const detectionData = await detectionPromise;
       setResults(detectionData);
     } catch (error) {
-      console.error('Visualization failed:', error);
-      alert(`Visualization failed: ${error.message}`);
+      console.error('Analysis failed:', error);
+      alert(`Analysis failed: ${error.message}`);
     } finally {
       setVisualizing(false);
     }
